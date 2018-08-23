@@ -1,8 +1,55 @@
 
 const zrender = require('zrender');
 
+
+
+function getBorder(cfg) {
+    // 线标
+    var labelText = cfg.label.show ? cfg.label.formatter(cfg) : '';
+
+    var borderColor = cfg.itemStyle.borderColor;
+    var shadowBlur = cfg.itemStyle.shadowBlur || 0;
+    var shadowColor = cfg.itemStyle.shadowColor || '';
+    var imgUrl;
+
+
+    var opc = cfg.opacity || 1;//节点透明度
+    var _SecIgnore = false;
+    // 外圈
+    var _Sec = new zrender.Sector({
+        shape: {
+            cx: 0,
+            cy: 0,
+            r0: 1.40,
+            r: 1.48 + cfg.itemStyle.borderWidth * 0.08
+        },
+        z: 10,
+        name: 'outsideBorder',
+        scale: [cfg.symbolSize, cfg.symbolSize],
+        ignore: _SecIgnore, //是否隐藏
+        style: {
+            fill: borderColor,
+            text: labelText,
+            textFill: cfg.label.color,
+            shadowBlur: shadowBlur,
+            shadowColor: shadowColor,
+            textPosition: cfg.label.position,
+            fontSize: 12,
+            opacity: opc
+        }
+    });
+
+    return _Sec;
+}
+
 // 圆形节点
 function getNodeIt(cfg, option) {
+    var g = new zrender.Group({
+        position: [0, 0]
+    })
+
+    var _Sec = getBorder(cfg);
+// debugger
     var node = new zrender.Circle({
         shape: {
             cx: 0,
@@ -10,10 +57,11 @@ function getNodeIt(cfg, option) {
             r: 1.4
         },
         scale: [cfg.symbolSize, cfg.symbolSize],
-        id: cfg['id'],
+        index: cfg['index'],
         tag: 'node',
+        name: 'node',
         style: {
-            fill: cfg['id'] == 3 ? 'yellow' : 'red',
+            fill: cfg['index'] == 3 ? 'yellow' : 'red',
             text: cfg.name,
             textFill: '#ccc',
             textPosition: 'bottom',
@@ -23,10 +71,71 @@ function getNodeIt(cfg, option) {
     })
 
 
-    return node;
+
+    g.add(_Sec);
+    g.add(node);
+
+
+    return g;
 }
+
+
+
+// 矩形节点
+function getNodeRect(cfg, option) {
+    var g = new zrender.Group({
+        position: [0, 0]
+    })
+
+    if (!Array.isArray(cfg.symbolSize)) {
+        cfg.symbolSize = [cfg.symbolSize, cfg.symbolSize];
+    }
+    var width = cfg.symbolSize[0];
+    var height = cfg.symbolSize[1];
+
+    var w = width / 3.2;
+    var h = height / 3.2;
+
+    var b = w > h ? w : h;
+
+    var node = new zrender.Rect({
+        shape: {
+            x: -width / b / 2,
+            y: -height / b / 2,
+            width: width / b,
+            height: height / b
+        },
+        scale: [b, b],
+        index: cfg['index'],
+        tag: 'node',
+        name: 'node',
+        style: {
+            fill: cfg['index'] == 3 ? 'yellow' : 'red',
+            text: '123',
+            textFill: '#ccc',
+            textPosition: 'bottom',
+            fontSize: 12,
+            stroke: cfg.itemStyle.borderColor,
+            textPosition: cfg.label.position,
+            lineWidth: cfg.itemStyle.borderWidth / b
+        },
+        draggable: true
+    })
+
+    g.add(node);
+
+
+    return g;
+}
+
 // 图片节点
 function getImgIt(cfg, option) {
+    var g = new zrender.Group({
+        position: [0, 0]
+    })
+
+    var _Sec = getBorder(cfg);
+
     var opc = cfg.opacity || 1;//节点透明度
     var img = new Image();
     img.crossOrigin = '*';
@@ -42,7 +151,7 @@ function getImgIt(cfg, option) {
             height: 3.2
         },
         culling: true,
-        id: cfg['id'],
+        index: cfg['index'],
         // invisible: !option.animate && !cfg.flag,
         source: cfg,
         name: 'node',
@@ -61,10 +170,15 @@ function getImgIt(cfg, option) {
 
     node.setClipPath(clipPath);
 
-    return node;
+
+
+    g.add(_Sec);
+    g.add(node);
+
+    return g;
 }
 
-function getWaterNode(){
+function getWaterNode() {
     var waterTextBoxHeight = ops.height;
     var waterTextBoxWidth = ops.width;
 
@@ -102,5 +216,6 @@ function getWaterNode(){
 module.exports = {
     getImgIt,
     getNodeIt,
+    getNodeRect,
     getWaterNode
 }

@@ -4,7 +4,8 @@ var graph = {
     symbol:'circle',//'circle', 'rect'
     // 节点的样式
     itemStyle: {
-        borderColor: '#075c86',
+        // borderColor: '#075c86',
+        borderColor: 'white',
         borderWidth:1.0
     },
     // 节点下面文字的样式

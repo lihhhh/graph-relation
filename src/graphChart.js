@@ -3,13 +3,13 @@
     const zrender = require('zrender');
     const rsAddNodes = require('./addNodes');
     const rsDefaultOption = require('./rsDefaultOption');
-    const {clone,mergeWith,extend,isObject,isUndefined,isNull} = require('lodash');
+    const { clone, mergeWith, extend, isObject, isUndefined, isNull } = require('lodash');
 
     const d3 = require('d3-force');
 
     var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(function (d) { return d.id; }))
-        .force("charge", d3.forceManyBody().strength(-700));
+        .force("link", d3.forceLink().distance(100).strength(100).id(function (d) { return d.id; }))
+        .force("charge", d3.forceManyBody());
 
 
     const util = zrender.util;
@@ -47,9 +47,11 @@
 
     var scheduledAnimationFrame = false;
     var ticked = function (a, b, c) {
+        
         if (window.requestAnimationFrame) {
             if (scheduledAnimationFrame) { return }
             scheduledAnimationFrame = true
+            
             window.requestAnimationFrame(() => {
                 scheduledAnimationFrame = false;
                 this.render();
@@ -59,15 +61,16 @@
                 this.render();
             }, 20)
         }
+        
     }
 
     Init.prototype = {
         constructor: Init,
         setOption: function (option) {
-            this.option = option||this.option;
+            this.option = option || this.option;
             option = this.option;
 
-            if(!this.option) throw 'option Can\'t be empty';
+            if (!this.option) throw 'option Can\'t be empty';
             option.data = option.data || option.nodes;
             option._myChart = this;
             option._zr = this._zr;
@@ -75,7 +78,7 @@
             option.screenY = this._zr.getHeight();
             option.updateLayout = updateLayout;
             this.mergeOption(option);
-            
+
 
             option.simulation = simulation;
             // debugger
@@ -103,9 +106,9 @@
 
             option.series.data.map(function (_d) {
                 rsDefaultOption.nodes.map(function (k) {
-                    if(_d[k]){
+                    if (_d[k]) {
                         mergeWith(_d[k], option.series[k], customizer);
-                    }else{
+                    } else {
                         _d[k] = option.series[k];
                     }
                     _d[k] = clone(_d[k]);
@@ -114,16 +117,16 @@
 
             option.series.links.map(function (_d) {
                 rsDefaultOption.links.map(function (k) {
-                    if(_d[k]){
+                    if (_d[k]) {
                         mergeWith(_d[k], option.series[k], customizer);
-                    }else{
+                    } else {
                         _d[k] = option.series[k];
                     }
                     _d[k] = clone(_d[k]);
                 })
             })
         },
-        update:function(){
+        update: function () {
             this.mergeOption();
             this.render();
         },
@@ -191,6 +194,50 @@
         getZoom: rsAddNodes.getZoom,
         setRectSelect: rsAddNodes.setRectSelect,
         //设置水印 ('str',options);
+        setSelectCenter: function (rectSelect) {
+            var option = this.option;
+            var rectSelectCenterX = rectSelect[0];
+            var rectSelectCenterY = rectSelect[1];
+            var width = rectSelect[2];
+            var height = rectSelect[3];
+
+
+            if (!width || !height) return;
+
+            // 画布宽高
+            var screenX = option.screenX;
+            var screenY = option.screenY;
+
+            // 获取当前视图中心点
+            var ps = this.getCenter();
+            // 获取当前缩放倍数
+            var scale = this.getZoom();
+            var scaleX, scaleY;
+
+            // 判断当次需要放大的倍数
+            if (screenX / width > screenY / height) {
+                scaleX = Math.abs(screenY / height);
+                scaleY = Math.abs(screenY / height);
+            } else {
+                scaleX = Math.abs(screenX / width);
+                scaleY = Math.abs(screenX / width);
+            }
+
+            // 设置缩放中心点
+            ps[0] -= (rectSelectCenterX - ps[0]) * (scaleX - 1);
+            ps[1] -= (rectSelectCenterY - ps[1]) * (scaleY - 1);
+
+            // 整体居中
+            ps[0] = ps[0] - (rectSelectCenterX - screenX / 2); //
+            ps[1] = ps[1] - (rectSelectCenterY - screenY / 2);
+
+            // 设置缩放倍数
+            this.setZoom([scaleX, scaleY], false, true);
+            // 设置视图中心点
+            this.setCenter(ps, true);
+            // 重画视图
+            this.update();
+        },
         setWaterText: function setWaterText(str, ops) {
             var options = {
                 width: this._zr.getWidth(),

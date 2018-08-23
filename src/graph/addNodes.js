@@ -1,6 +1,5 @@
 const zrender = require('zrender');
-const { merge } = require('lodash');
-
+const {merge} = require('lodash');
 const nodeFactory = require('./node.factory');
 var nodeId = {};
 
@@ -21,8 +20,7 @@ const _rect = new zrender.Rect({
     invisible: true,
     z: -1,
     tag: 'globalGroup',
-    name: 'globalGroup',
-    cursor:'inherit',
+    // cursor:'crosshair',
     style: {
         fill: 'transparent'
     },
@@ -32,10 +30,9 @@ const _rect = new zrender.Rect({
             this.selectModel.height = e.offsetY - this.selectModel.y;
             var rectS = new zrender.Rect({
                 shape: this.selectModel,
-                name: 'rectSelect',
+                name: 'rectS',
                 cursor: 'all-scroll',
                 draggable: true,
-                z:99,
                 style: {
                     // stroke: '#9eacc7',
                     stroke: 'white',
@@ -44,7 +41,7 @@ const _rect = new zrender.Rect({
                     // fill: 'rgba(1,15,31,0.3)'
                 }
             });
-            globalG.remove(globalG.childOfName('rectSelect'));
+            globalG.remove(globalG.childOfName('rectS'));
             globalG.add(rectS);
             // mouseup
             rectS.on('mousemove', function (e) {
@@ -54,7 +51,7 @@ const _rect = new zrender.Rect({
                     var childCoord = child._children[0].transformCoordToGlobal(0, 0);
                     if (this.contain(childCoord[0], childCoord[1])) {
                         var node = child.childOfName('node');
-                        selected.push(nodeId[node.index]);
+                        selected.push(nodeId[node.id]);
                     };
                 })
                 _g.__zr.trigger('selected', {
@@ -73,8 +70,8 @@ const _rect = new zrender.Rect({
     },
     onmousedown: function (e) {
         console.log(e);
-        if (e.which != 1) return;
-        globalG.remove(globalG.childOfName('rectSelect'));
+        if(e.which != 1) return;
+        globalG.remove(globalG.childOfName('rectS'));
         this.z = 9999;
         this.dirty();
         this.msd = true;
@@ -95,50 +92,51 @@ const _g = new zrender.Group({
 });
 
 
-function setEvents(node, cfg, option) {
-    var events = {
-        onmouseover: function () {
-            this.parent.parent.animate()
-                .when(160, { scale: [1.15, 1.15] })
-                .start('elasticOut');
-        },
-        onmouseout: function (e) {
-            this.parent.parent.animate()
-                .when(60, { scale: [1, 1] })
-                .start('elasticOut');
-        },
-        ondrag: function (params) {
-            nodeId[this.index].bindS.map((item) => {
-                item.setShape('x1', this.parent.parent.position[0] + this.position[0]);
-                item.setShape('y1', this.parent.parent.position[1] + this.position[1]);
-            })
-            nodeId[this.index].bindT.map((item) => {
-                item.setShape('x2', this.parent.parent.position[0] + this.position[0]);
-                item.setShape('y2', this.parent.parent.position[1] + this.position[1]);
-            })
-
-            cfg.x = this.parent.parent.position[0] + this.position[0];
-            cfg.y = this.parent.parent.position[1] + this.position[1];
-            cfg.fx = this.parent.parent.position[0] + this.position[0];
-            cfg.fy = this.parent.parent.position[1] + this.position[1];
-            option.updateLayout();
-        }
-    }
-
-    merge(node, events);
-}
-
 function getNode(cfg, option) {
     var nodeG = new zrender.Group({
         position: [cfg.x, cfg.y],
-        ignore: nodeId[cfg.index].ignore,
+        ignore: nodeId[cfg.id].ignore,
         name: 'nodeG',
         culling: true
     });
 
+    // 线标
+    var labelText = cfg.label.show ? cfg.label.formatter(cfg) : '';
+
+    var borderColor = cfg.itemStyle.borderColor;
+    var shadowBlur = cfg.itemStyle.shadowBlur || 0;
+    var shadowColor = cfg.itemStyle.shadowColor || '';
+    var imgUrl;
+
+
     var opc = cfg.opacity || 1;//节点透明度
-
-
+    var _SecIgnore = false;
+    // 外圈
+    var _Sec = new zrender.Sector({
+        shape: {
+            cx: 0,
+            cy: 0,
+            r0: 1.40,
+            r: 1.48+cfg.itemStyle.borderWidth*0.08
+        },
+        z: 10,
+        name: 'outsideBorder',
+        scale: [cfg.symbolSize, cfg.symbolSize],
+        ignore: _SecIgnore, //是否隐藏
+        style: {
+            fill: borderColor,
+            text: labelText,
+            textFill: cfg.label.color,
+            // shadowBlur:8,
+            // shadowColor:'#9ed703',
+            shadowBlur: shadowBlur,
+            shadowColor: shadowColor,
+            textPosition: cfg.label.position,
+            // insideOriginalTextPosition: 'bottom',
+            fontSize: 12,
+            opacity: opc
+        }
+    });
 
     var node;
 
@@ -146,11 +144,38 @@ function getNode(cfg, option) {
         node = nodeFactory.getImgIt(cfg, option);
     } else if (cfg.symbol == 'circle') {
         node = nodeFactory.getNodeIt(cfg, option);
-    } else if (cfg.symbol == 'rect') {
-        node = nodeFactory.getNodeRect(cfg, option);
     }
 
-    setEvents(node.childOfName('node'), cfg, option);
+    var events = {
+        onmouseover: function () {
+            this.parent.animate()
+                .when(160, { scale: [1.15, 1.15] })
+                .start('elasticOut');
+        },
+        onmouseout: function (e) {
+            this.parent.animate()
+                .when(60, { scale: [1, 1] })
+                .start('elasticOut');
+        },
+        ondrag: function (params) {
+            nodeId[this.id].bindS.map((item) => {
+                item.setShape('x1', this.parent.position[0] + this.position[0]);
+                item.setShape('y1', this.parent.position[1] + this.position[1]);
+            })
+            nodeId[this.id].bindT.map((item) => {
+                item.setShape('x2', this.parent.position[0] + this.position[0]);
+                item.setShape('y2', this.parent.position[1] + this.position[1]);
+            })
+
+            cfg.x = this.parent.position[0] + this.position[0];
+            cfg.y = this.parent.position[1] + this.position[1];
+            cfg.fx = this.parent.position[0] + this.position[0];
+            cfg.fy = this.parent.position[1] + this.position[1];
+            option.updateLayout();
+        }
+    }
+
+    merge(node,events);
 
     var lock = new zrender.Image({
         style: {
@@ -161,13 +186,14 @@ function getNode(cfg, option) {
             opacity: opc,
             height: 2
         },
-        index: cfg['index'],
+        id: cfg['id'],
         ignore: !cfg.lock,
         name: 'node',
         tag: 'lock',
         scale: [cfg.symbolSize * 0.4, cfg.symbolSize * 0.4],
     })
 
+    nodeG.add(_Sec);
     nodeG.add(node);
     nodeG.add(lock);
 
@@ -182,17 +208,14 @@ const addNodes = function (option) {
         name: 'nodeGroups',
         tag: 'nodeGroups'
     });
-
     for (var i = 0; i < ln; i++) {
-        var _id = series.data[i]['index'];
-        
+        var _id = series.data[i]['id'];
         nodeId[_id] = series.data[i];
         nodeId[_id].bindS = [];
         nodeId[_id].bindT = [];
         nodeId[_id].ignore = series.data[i].ignore;
-        // console.time();
+
         var node = getNode(series.data[i], option);
-        // console.timeEnd();
 
         nodeg.add(node);
     };
@@ -212,11 +235,11 @@ const addLinks = function (option) {
         var linkG = new zrender.Group({
             name: 'relationG'
         });
-
+        
         var edgeLabelText = lk.edgeLabel.show ? lk.edgeLabel.formatter(series.links[i]) : '';
         // var edgeLabelText = '';
-        var source = lk.source.index;
-        var target = lk.target.index;
+        var source = lk.source.id;
+        var target = lk.target.id;
         // var _opc = nodeId[source].opacity<nodeId[target].opacity ? nodeId[source].opacity : nodeId[target].opacity;
         var _opc = lk.opacity;
 
@@ -249,7 +272,7 @@ const addLinks = function (option) {
                 textRotation: rota,
                 lineWidth: lk.lineStyle.width,
                 textFill: lk.edgeLabel.color,
-                opacity: lk.lineStyle.opacity
+                opacity: _opc
             },
             z: -1
         })
@@ -269,21 +292,14 @@ const addView = function (option) {
     if (_g.position[0] == 'none') {
         _g.position[0] = 0;
         _g.position[1] = 0;
-        // _g.position[0] = option._zr.getWidth() / 2;
-        // _g.position[1] = option._zr.getHeight() / 2;
     }
-    // console.time();
     _g.removeAll();
-    // console.timeEnd();
+
     addNodes(option);
-    
-    
-    
     addLinks(option);
-    
     for (var k in nodeId) {
         _g.eachChild(function (child) {
-            if (nodeId[k].index == child.index) {
+            if (nodeId[k].id == child.id) {
                 child._b = nodeId[k];
             }
         })
@@ -294,7 +310,7 @@ const addView = function (option) {
 
 
 const setWaterText = function (str, ops) {
-    var waterGroup = nodeFactory.getWaterNode(str, ops);
+    var waterGroup = nodeFactory.getWaterNode(str,ops);
 
     waterGroup.dirty();
     globalG.remove(globalG.childOfName('waterText'));
@@ -359,7 +375,7 @@ function setRectSelect(status) {
     } else {
         _rect.cursor = 'inherit';
         _rect.status = status;
-        globalG.remove(globalG.childOfName('rectSelect'));
+        globalG.remove(globalG.childOfName('rectS'));
     }
     globalG.dirty();
 }
