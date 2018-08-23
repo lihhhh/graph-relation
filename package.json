@@ -1,6 +1,6 @@
 {
   "name": "graph-relation",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
@@ -27,5 +27,13 @@
     "d3-force": "^1.1.0",
     "lodash": "^4.17.10",
     "zrender": "^3.7.4"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lihhhh/graph-relation"
+  },
+  "keywords": [
+    "canvas",
+    "graph"
+  ]
 }
