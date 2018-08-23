@@ -26,8 +26,8 @@ var options = {
                 return '';
             }
         },
-        data: datas.nodes,
-        links: datas.links,
+        data: datas.nodes1,
+        links: datas.links1,
         lineStyle: {
             opacity: 1,
             width: 1
