@@ -1,4 +1,5 @@
-var GraphRelation = require('./../dist/index');
+// var GraphRelation = require('./../dist/index');
+var GraphRelation = require('graph-relation');
 var datas = require('./datas');
 
 var myChart = GraphRelation(document.getElementById('main'));

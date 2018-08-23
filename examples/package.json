@@ -23,6 +23,6 @@
     "zrender": "^4.0.4"
   },
   "dependencies": {
-    "graph-relation": "^1.0.2"
+    "graph-relation": "^1.0.8"
   }
 }
